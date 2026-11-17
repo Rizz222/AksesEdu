@@ -1,0 +1,1464 @@
+<!DOCTYPE html>
+<html lang="id" class="h-full bg-slate-950 text-slate-100">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AksesEdu - Media Pembelajaran Inklusi Tunanetra</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    /* Focus Ring Kontras Tinggi untuk Siswa Low Vision */
+    *:focus-visible {
+      outline: 4px solid #facc15 !important;
+      outline-offset: 4px !important;
+    }
+    .font-accessibility-large {
+      font-size: 1.25rem;
+      line-height: 2rem;
+    }
+    .font-accessibility-xlarge {
+      font-size: 1.5rem;
+      line-height: 2.25rem;
+    }
+    /* Pulse Animation untuk Indikator Suara Aktif */
+    @keyframes soundWave {
+      0%, 100% { height: 6px; }
+      50% { height: 20px; }
+    }
+    .wave-bar {
+      animation: soundWave 1s infinite ease-in-out;
+    }
+    .wave-bar:nth-child(2) { animation-delay: 0.2s; }
+    .wave-bar:nth-child(3) { animation-delay: 0.4s; }
+    body.mode-touch .kbd-only{display:none!important}
+    body.mode-desktop .touch-only{display:none!important}
+    #touch-surface{position:fixed;inset:0;z-index:40;background:transparent;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
+    .touch-selected{outline:6px solid #facc15!important;outline-offset:6px;transform:scale(1.02)}
+  </style>
+</head>
+<body class="mode-desktop h-full flex flex-col font-sans antialiased selection:bg-amber-400 selection:text-slate-950">
+
+  <!-- Live Announcer untuk Screen Reader (WCAG Compliant) -->
+  <div id="aria-announcer" class="sr-only" aria-live="assertive" aria-atomic="true"></div>
+
+  <!-- Skip Link untuk Pengguna Keyboard -->
+  <a href="#main-content" class="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:p-4 focus:bg-amber-400 focus:text-slate-950 font-bold rounded-b-lg shadow-2xl">
+    Lompati Navigasi, Langsung ke Konten Utama (Tekan Enter)
+  </a>
+
+  <!-- Header Utama -->
+  <header class="border-b-4 border-amber-400 bg-slate-900 px-4 py-4 md:px-8 shadow-lg" role="banner">
+    <div class="max-w-6xl mx-auto flex flex-wrap items-center justify-between gap-4">
+      
+      <!-- Logo & Judul Aplikasi -->
+      <div class="flex items-center gap-3">
+        <div class="bg-amber-400 text-slate-950 p-3 rounded-2xl flex items-center justify-center font-black text-2xl shadow-md" aria-hidden="true">
+          <i data-lucide="volume-2" class="w-8 h-8"></i>
+        </div>
+        <div>
+          <h1 class="text-2xl md:text-3xl font-extrabold text-amber-400 tracking-wide">
+            AksesEdu <span class="text-white text-xl md:text-2xl font-semibold"></span>
+          </h1>
+          <p class="text-xs md:text-sm text-slate-300 font-medium">
+            Media Pembelajaran Audio Interaktif Tunanetra 
+          </p>
+        </div>
+      </div>
+
+      <!-- Status Indikator Pembaca Suara -->
+      <div class="flex items-center gap-2 bg-slate-800 border-2 border-slate-700 px-4 py-2 rounded-xl" id="speech-status-container">
+        <div id="speech-indicator" class="flex items-center gap-1 h-6" aria-hidden="true">
+          <span class="w-1.5 bg-amber-400 rounded-full wave-bar h-2"></span>
+          <span class="w-1.5 bg-amber-400 rounded-full wave-bar h-2"></span>
+          <span class="w-1.5 bg-amber-400 rounded-full wave-bar h-2"></span>
+        </div>
+        <span id="speech-status-text" class="text-sm font-bold text-amber-300">Suara Siap</span>
+      </div>
+
+      <!-- Control Quick Actions -->
+      <nav class="flex items-center gap-2" aria-label="Menu Akses Cepat">
+        <button id="btn-home" onclick="navToHome()" class="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-amber-300 border-2 border-amber-400/50 hover:border-amber-400 px-4 py-2.5 rounded-xl font-bold transition focus:ring-4 focus:ring-amber-400" aria-label="Kembali ke Beranda (Pintasan Alt Plus H)">
+          <i data-lucide="home" class="w-5 h-5" aria-hidden="true"></i>
+          <span class="hidden sm:inline">Beranda <span class="kbd-only">[Alt+H]</span></span>
+        </button>
+
+        <button id="btn-shortcuts" onclick="toggleShortcutModal(true)" class="flex items-center gap-2 bg-amber-400 hover:bg-amber-300 text-slate-950 px-4 py-2.5 rounded-xl font-black transition focus:ring-4 focus:ring-amber-300" aria-label="Buka Panduan Pintasan Keyboard (Pintasan Alt Plus K)">
+          <i data-lucide="keyboard" class="w-5 h-5" aria-hidden="true"></i>
+          <span class="hidden sm:inline">Bantuan <span class="kbd-only">[Alt+K]</span></span>
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Control Bar Aksesibilitas Suara & Ukuran Teks -->
+  <section class="bg-slate-900/80 border-b border-slate-800 px-4 py-3" aria-label="Pengaturan Aksesibilitas">
+    <div class="max-w-6xl mx-auto flex flex-wrap items-center justify-between gap-4 text-sm">
+      
+      <!-- Pengaturan Kecepatan Suara -->
+      <div class="flex items-center gap-3">
+        <label for="speed-select" class="font-bold text-slate-200 flex items-center gap-1.5">
+          <i data-lucide="gauge" class="w-4 h-4 text-amber-400" aria-hidden="true"></i>
+          Kecepatan Bicara:
+        </label>
+        <select id="speed-select" onchange="changeSpeechRate(this.value)" class="bg-slate-800 border-2 border-amber-400/70 text-amber-300 font-bold rounded-lg px-3 py-1.5 focus:border-amber-400">
+          <option value="0.8">0.8x (Lambat)</option>
+          <option value="1.0" selected>1.0x (Normal)</option>
+          <option value="1.2">1.2x (Cepat)</option>
+          <option value="1.4">1.4x (Sangat Cepat)</option>
+        </select>
+      </div>
+
+      <!-- Tombol Audio Toggle & Replay -->
+      <div class="flex items-center gap-3 flex-wrap">
+        <button id="btn-mode" onclick="cycleInputMode()" class="flex items-center gap-2 bg-slate-800 border border-slate-700 hover:border-amber-400 text-slate-200 px-3 py-1.5 rounded-lg font-bold transition">
+          <i data-lucide="smartphone" class="w-4 h-4 text-amber-400" aria-hidden="true"></i>
+          <span id="mode-text">Mode: Otomatis</span>
+        </button>
+        <button id="btn-toggle-mute" onclick="toggleMute()" class="flex items-center gap-2 bg-slate-800 border border-slate-700 hover:border-amber-400 text-slate-200 px-3 py-1.5 rounded-lg font-bold transition">
+          <i id="mute-icon" data-lucide="volume-2" class="w-4 h-4 text-amber-400"></i>
+          <span id="mute-text">Suara: On</span><span class="kbd-only">[Alt+M]</span>
+        </button>
+
+        <button onclick="replayCurrentSection()" class="flex items-center gap-2 bg-slate-800 border border-slate-700 hover:border-amber-400 text-amber-300 px-3 py-1.5 rounded-lg font-bold transition">
+          <i data-lucide="rotate-ccw" class="w-4 h-4" aria-hidden="true"></i>
+          <span>Ulangi Bacaan [Spasi]</span>
+        </button>
+      </div>
+
+      <!-- Pengatur Ukuran Teks untuk Low Vision -->
+      <div class="flex items-center gap-2">
+        <span class="font-bold text-slate-300 hidden md:inline">Ukuran Teks:</span>
+        <button onclick="setFontSize('normal')" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded font-bold text-xs" title="Ukuran Teks Normal">A</button>
+        <button onclick="setFontSize('large')" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded font-bold text-sm text-amber-300" title="Ukuran Teks Besar">A+</button>
+        <button onclick="setFontSize('xlarge')" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded font-bold text-base text-amber-400" title="Ukuran Teks Sangat Besar">A++</button>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Konten Utama (Main Content Container) -->
+  <main id="main-content" class="flex-1 max-w-6xl w-full mx-auto p-4 md:p-8" tabIndex="-1" role="main">
+    
+    <!-- Dynamic View Screen Container -->
+    <div id="app-viewport" class="transition-all duration-300">
+      <!-- Dynamic Views rendered via JavaScript -->
+    </div>
+
+  </main>
+
+  <!-- Modal Bantuan Pintasan Keyboard (WCAG Dialog) -->
+  <div id="shortcut-modal" class="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-sm hidden flex items-center justify-center p-4" role="dialog" aria-labelledby="modal-title" aria-modal="true">
+    <div class="bg-slate-900 border-4 border-amber-400 rounded-3xl max-w-2xl w-full p-6 md:p-8 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+      
+      <div class="flex items-center justify-between border-b-2 border-slate-800 pb-4 mb-6">
+        <div class="flex items-center gap-3">
+          <i data-lucide="keyboard" class="w-8 h-8 text-amber-400" aria-hidden="true"></i>
+          <h2 id="modal-title" class="text-2xl font-black text-amber-400"><span class="kbd-only">Panduan Pintasan Keyboard</span><span class="touch-only">Panduan Gestur Sentuh</span></h2>
+        </div>
+        <button onclick="toggleShortcutModal(false)" class="p-2 text-slate-400 hover:text-white bg-slate-800 rounded-xl font-bold" aria-label="Tutup Dialog Bantuan">
+          <i data-lucide="x" class="w-6 h-6"></i>
+        </button>
+      </div>
+
+      <p class="kbd-only text-slate-300 mb-6 font-medium">
+        Seluruh fungsi aplikasi ini dapat dikendalikan penuh menggunakan keyboard tanpa mouse:
+      </p>
+
+      <div class="kbd-only grid grid-cols-1 md:grid-cols-2 gap-4 text-left mb-6">
+        <div class="bg-slate-800/80 p-4 rounded-xl border border-slate-700">
+          <span class="inline-block bg-amber-400 text-slate-950 font-black px-2.5 py-1 rounded text-sm mb-2">Tombol SPASI</span>
+          <p class="text-sm font-bold text-slate-200">Membaca ulang materi / pertanyaan yang aktif saat ini.</p>
+        </div>
+
+        <div class="bg-slate-800/80 p-4 rounded-xl border border-slate-700">
+          <span class="inline-block bg-amber-400 text-slate-950 font-black px-2.5 py-1 rounded text-sm mb-2">Angka 1, 2, 3, 4</span>
+          <p class="text-sm font-bold text-slate-200">Memilih Jawaban A, B, C, atau D pada Kuis Interaktif secara instan.</p>
+        </div>
+
+        <div class="bg-slate-800/80 p-4 rounded-xl border border-slate-700">
+          <span class="inline-block bg-amber-400 text-slate-950 font-black px-2.5 py-1 rounded text-sm mb-2">Alt + H</span>
+          <p class="text-sm font-bold text-slate-200">Kembali ke Beranda / Menu Pilihan Mata Pelajaran.</p>
+        </div>
+
+        <div class="bg-slate-800/80 p-4 rounded-xl border border-slate-700">
+          <span class="inline-block bg-amber-400 text-slate-950 font-black px-2.5 py-1 rounded text-sm mb-2">Alt + K</span>
+          <p class="text-sm font-bold text-slate-200">Membuka atau Menutup jendela bantuan pintasan ini.</p>
+        </div>
+
+        <div class="bg-slate-800/80 p-4 rounded-xl border border-slate-700">
+          <span class="inline-block bg-amber-400 text-slate-950 font-black px-2.5 py-1 rounded text-sm mb-2">Alt + M</span>
+          <p class="text-sm font-bold text-slate-200">Mengaktifkan atau Mematikan narasi suara pembaca.</p>
+        </div>
+
+        <div class="bg-slate-800/80 p-4 rounded-xl border border-slate-700">
+          <span class="inline-block bg-amber-400 text-slate-950 font-black px-2.5 py-1 rounded text-sm mb-2">TAB / Shift+TAB</span>
+          <p class="text-sm font-bold text-slate-200">Berpindah fokus antar tombol dan opsi menu.</p>
+        </div>
+      </div>
+
+      <p class="touch-only text-slate-300 mb-6 font-medium">Kendalikan seluruh aplikasi dengan gerakan jari di mana saja pada layar:</p>
+      <div class="touch-only grid grid-cols-1 md:grid-cols-2 gap-4 text-left mb-6">
+        <div class="bg-slate-800/80 p-4 rounded-xl border border-slate-700"><span class="inline-block bg-amber-400 text-slate-950 font-black px-2.5 py-1 rounded text-sm mb-2">Ketuk 1x</span><p class="text-sm font-bold text-slate-200">Mengulang suara materi atau soal.</p></div>
+        <div class="bg-slate-800/80 p-4 rounded-xl border border-slate-700"><span class="inline-block bg-amber-400 text-slate-950 font-black px-2.5 py-1 rounded text-sm mb-2">Ketuk 2x cepat</span><p class="text-sm font-bold text-slate-200">Memilih, mengunci jawaban, atau melanjutkan.</p></div>
+        <div class="bg-slate-800/80 p-4 rounded-xl border border-slate-700"><span class="inline-block bg-amber-400 text-slate-950 font-black px-2.5 py-1 rounded text-sm mb-2">Geser kanan</span><p class="text-sm font-bold text-slate-200">Berikutnya (pilihan, bab, atau soal).</p></div>
+        <div class="bg-slate-800/80 p-4 rounded-xl border border-slate-700"><span class="inline-block bg-amber-400 text-slate-950 font-black px-2.5 py-1 rounded text-sm mb-2">Geser kiri</span><p class="text-sm font-bold text-slate-200">Sebelumnya.</p></div>
+        <div class="bg-slate-800/80 p-4 rounded-xl border border-slate-700"><span class="inline-block bg-amber-400 text-slate-950 font-black px-2.5 py-1 rounded text-sm mb-2">Geser atas</span><p class="text-sm font-bold text-slate-200">Mendengar panduan gestur.</p></div>
+        <div class="bg-slate-800/80 p-4 rounded-xl border border-slate-700"><span class="inline-block bg-amber-400 text-slate-950 font-black px-2.5 py-1 rounded text-sm mb-2">Geser bawah</span><p class="text-sm font-bold text-slate-200">Menghentikan suara.</p></div>
+        <div class="bg-slate-800/80 p-4 rounded-xl border border-slate-700"><span class="inline-block bg-amber-400 text-slate-950 font-black px-2.5 py-1 rounded text-sm mb-2">Tahan ±1 detik</span><p class="text-sm font-bold text-slate-200">Kembali ke Beranda.</p></div>
+        <div class="bg-slate-800/80 p-4 rounded-xl border border-slate-700"><span class="inline-block bg-amber-400 text-slate-950 font-black px-2.5 py-1 rounded text-sm mb-2">Sentuh 3 jari</span><p class="text-sm font-bold text-slate-200">Mode guru: matikan/aktifkan gestur.</p></div>
+      </div>
+
+      <div class="text-center pt-4 border-t border-slate-800">
+        <button onclick="toggleShortcutModal(false)" class="w-full py-3.5 bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-lg rounded-2xl shadow-lg">
+          Saya Mengerti (Tutup Panduan)
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Footer Aplikasi -->
+  <footer class="border-t-2 border-slate-800 bg-slate-900 py-6 px-4 text-center text-slate-400 text-sm mt-auto" role="contentinfo">
+    <div class="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+      <p class="font-medium">
+        &copy; AksesEdu — Didesain Khusus Pendidikan Inklusi Tunanetra Indonesia
+      </p>
+      <div class="flex items-center gap-4 text-xs font-bold text-amber-400">
+        <span>WCAG 2.1 AAA Compliant</span>
+        <span>•</span>
+        <span>Web Speech & Audio API</span>
+      </div>
+    </div>
+  </footer>
+
+  <div id="touch-surface" class="hidden" role="button" tabindex="-1" aria-label="Area kendali gerakan jari. Ketuk dua kali untuk memilih atau melanjutkan."></div>
+  <button id="btn-resume-gesture" onclick="resumeGestures()" class="hidden fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-amber-400 text-slate-950 font-black px-6 py-4 rounded-2xl shadow-2xl text-lg">Mode Guru: Aktifkan Kembali Kontrol Gestur</button>
+
+  <!-- Javascript Logic Aplikasi -->
+  <script>
+    /* ==========================================================================
+       1. DATA APLIKASI: MATERI & KUIS SMA (Sejarah Indonesia & Biologi)
+       ========================================================================== */
+    const APP_DATA = {
+      subjects: [
+        {
+          id: 'sejarah',
+          title: 'Sejarah Indonesia',
+          grade: 'Kelas XI SMA',
+          topic: 'Peristiwa Proklamasi Kemerdekaan 1945',
+          description: 'Mempelajari detik-detik bersejarah perumusan teks proklamasi, peristiwa Rengasdengklok, hingga pembacaan teks 17 Agustus 1945.',
+          icon: 'landmark',
+          chapters: [
+            {
+              id: 'c1',
+              title: 'Bab 1: Peristiwa Rengasdengklok',
+              content: 'Pada tanggal 16 Agustus 1945 pukul 03.00 WIB, para pemuda seperti Sukarni, Chaerul Saleh, dan Wikana membawa Soekarno dan Mohammad Hatta ke Rengasdengklok. Tujuan tindakan ini adalah untuk mengamankan Soekarno-Hatta dari pengaruh Jepang serta mendesak agar proklamasi kemerdekaan Indonesia segera diproklamasikan tanpa menunggu janji hadiah dari pihak Jepang.'
+            },
+            {
+              id: 'c2',
+              title: 'Bab 2: Perumusan Teks Proklamasi',
+              content: 'Malam harinya, Soekarno-Hatta kembali ke Jakarta dan menuju ke rumah Laksamana Maeda di Jalan Tjitjoerang (sekarang Jalan Imam Bonjol No. 1). Di tempat inilah teks proklamasi dirumuskan oleh Soekarno, Mohammad Hatta, dan Ahmad Soebardjo. Teks halus tersebut kemudian diketik oleh Sayuti Melik dengan beberapa perubahan kata, seperti kata "tempoh" menjadi "tempo".'
+            },
+            {
+              id: 'c3',
+              title: 'Bab 3: Pembacaan Teks Proklamasi 17 Agustus 1945',
+              content: 'Jumat legi, 17 Agustus 1945 pukul 10.00 pagi, di Jalan Pegangsaan Timur Nomor 56 Jakarta, Soekarno didampingi Mohammad Hatta membacakan teks Proklamasi Kemerdekaan Indonesia. Acara dilanjutkan dengan pengibaran bendera Sang Saka Merah Putih yang dijahit oleh Ibu Fatmawati, diiringi lagu Indonesia Raya.'
+            }
+          ],
+          quiz: [
+            {
+              id: 'q1',
+              question: 'Siapakah tokoh muda yang mengetik naskah proklamasi kemerdekaan Indonesia setelah dirumuskan?',
+              options: [
+                'A. Sukarni',
+                'B. Sayuti Melik',
+                'C. Ahmad Soebardjo',
+                'D. Chaerul Saleh'
+              ],
+              correctIndex: 1,
+              explanation: 'Jawaban benar adalah B. Sayuti Melik adalah tokoh pemuda yang mengetik naskah proklamasi yang telah dirumuskan Soekarno, Hatta, dan Ahmad Soebardjo.'
+            },
+            {
+              id: 'q2',
+              question: 'Di manakah lokasi perumusan naskah proklamasi kemerdekaan dilakukan pada malam hari tanggal 16 Agustus 1945?',
+              options: [
+                'A. Gedung Pancasila',
+                'B. Rumah Laksamana Maeda',
+                'C. Istana Merdeka',
+                'D. Rumah Soekarno di Pegangsaan Timur'
+              ],
+              correctIndex: 1,
+              explanation: 'Jawaban benar adalah B. Perumusan naskah proklamasi dilaksanakan di kediaman Laksamana Tadashi Maeda di Jalan Imam Bonjol Jakarta.'
+            },
+            {
+              id: 'q3',
+              question: 'Siapakah tokoh nasional yang menjahit bendera pusaka Sang Saka Merah Putih pertama kali?',
+              options: [
+                'A. Ibu Fatmawati',
+                'B. S.K. Trimurti',
+                'C. Rasuna Said',
+                'D. Cut Nyak Dien'
+              ],
+              correctIndex: 0,
+              explanation: 'Jawaban benar adalah A. Ibu Fatmawati, istri dari Bung Karno, menjahit sendiri bendera Merah Putih yang dikibarkan saat proklamasi.'
+            }
+          ]
+        },
+        {
+          id: 'biologi',
+          title: 'Biologi SMA',
+          grade: 'Kelas XI SMA',
+          topic: 'Struktur dan Fungsi Organel Sel',
+          description: 'Mengenal struktur dasar sel, membran sel, mitokondria sebagai penghasil energi, serta nukleus sebagai pusat kendali genetik.',
+          icon: 'dna',
+          chapters: [
+            {
+              id: 'c1',
+              title: 'Bab 1: Membran Sel dan Nukleus',
+              content: 'Membran sel merupakan lapisan terluar yang bersifat semipermeabel, berfungsi mengatur keluar masuknya zat dari dan ke dalam sel. Di bagian dalam sel terdapat Nukleus atau inti sel, yang merupakan organel terbesar. Nukleus berfungsi sebagai pusat kendali seluruh aktivitas sel karena mengandung materi genetik berupa DNA.'
+            },
+            {
+              id: 'c2',
+              title: 'Bab 2: Mitokondria - Pembangkit Energi Sel',
+              content: 'Mitokondria sering dijuluki sebagai "Powerhouse of Cell" atau pusat daya sel. Organel ini bermembran ganda dan berfungsi melakukan respirasi seluler untuk menghasilkan ATP (Adenosina Trifosfat), yaitu energi kimia utama yang digunakan sel untuk melangsungkan berbagai fungsi kehidupan.'
+            },
+            {
+              id: 'c3',
+              title: 'Bab 3: Ribosom, Retikulum Endoplasma, dan Badan Golgi',
+              content: 'Ribosom adalah organel kecil tempat berlangsungnya sintesis protein. Retikulum Endoplasma (RE) terbagi menjadi RE Kasar yang ditempeli ribosom untuk transportasi protein, dan RE Halus untuk sintesis lemak. Selanjutnya, Badan Golgi berfungsi memproses, menyortir, dan mengemas protein sebelum dikirim ke organel lain atau luar sel.'
+            }
+          ],
+          quiz: [
+            {
+              id: 'q1',
+              question: 'Organel sel manakah yang berfungsi sebagai pusat kendali utama aktivitas sel karena menyimpan materi genetik DNA?',
+              options: [
+                'A. Mitokondria',
+                'B. Ribosom',
+                'C. Nukleus (Inti Sel)',
+                'D. Badan Golgi'
+              ],
+              correctIndex: 2,
+              explanation: 'Jawaban benar adalah C. Nukleus atau inti sel menyimpan materi genetik DNA dan mengendalikan seluruh aktivitas metabolisme sel.'
+            },
+            {
+              id: 'q2',
+              question: 'Mengapa mitokondria dijuluki sebagai "Powerhouse of Cell" atau pembangkit energi sel?',
+              options: [
+                'A. Karena menghasilkan molekul energi ATP melalui respirasi sel',
+                'B. Karena mencerna zat sisa beracun',
+                'C. Karena membungkus protein sintesis',
+                'D. Karena mengontrol pembelahan sel'
+              ],
+              correctIndex: 0,
+              explanation: 'Jawaban benar adalah A. Mitokondria menghasilkan energi ATP melalui proses respirasi seluler.'
+            },
+            {
+              id: 'q3',
+              question: 'Organel yang berfungsi sebagai tempat berlangsungnya sintesis molekul protein adalah...',
+              options: [
+                'A. Vakuola',
+                'B. Ribosom',
+                'C. Lisosom',
+                'D. Dinding Sel'
+              ],
+              correctIndex: 1,
+              explanation: 'Jawaban benar adalah B. Ribosom adalah organel tempat penterjemahan RNA menjadi rantai asam amino pembentuk protein.'
+            }
+          ]
+        }
+      ]
+    };
+
+    /* ==========================================================================
+       2. MANAJER AUDIO SYNTHESIZER (Web Audio API - Cues Auditoris)
+       ========================================================================== */
+    class AudioSynthesizer {
+      constructor() {
+        this.ctx = null;
+      }
+
+      init() {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          this.ctx = new AudioContext();
+        }
+        if (this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      }
+
+      // Suara Klik Navigasi (Crisp Tick)
+      playClick() {
+        try {
+          this.init();
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(800, this.ctx.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(400, this.ctx.currentTime + 0.05);
+          gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.05);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start();
+          osc.stop(this.ctx.currentTime + 0.05);
+        } catch (e) { console.log('Audio error:', e); }
+      }
+
+      tone(f1, f2, d, v) {
+        try {
+          this.init();
+          const o = this.ctx.createOscillator(), g = this.ctx.createGain(), t = this.ctx.currentTime;
+          o.type = 'sine'; o.frequency.setValueAtTime(f1, t); o.frequency.exponentialRampToValueAtTime(f2, t + d);
+          g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(0.01, t + d);
+          o.connect(g); g.connect(this.ctx.destination); o.start(t); o.stop(t + d);
+        } catch (e) { console.log('Audio error:', e); }
+      }
+      playBoundary() { this.tone(220, 140, 0.18, 0.25); }
+      playSelect() { this.tone(600, 1000, 0.1, 0.2); }
+
+      // Suara Jawaban Benar (Ascending Chime)
+      playCorrectChime() {
+        try {
+          this.init();
+          const now = this.ctx.currentTime;
+          const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+          notes.forEach((freq, idx) => {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(freq, now + (idx * 0.08));
+            gain.gain.setValueAtTime(0.2, now + (idx * 0.08));
+            gain.gain.exponentialRampToValueAtTime(0.001, now + (idx * 0.08) + 0.3);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(now + (idx * 0.08));
+            osc.stop(now + (idx * 0.08) + 0.3);
+          });
+        } catch (e) { console.log('Audio error:', e); }
+      }
+
+      // Suara Jawaban Salah (Low Frequency Buzz)
+      playWrongBuzz() {
+        try {
+          this.init();
+          const now = this.ctx.currentTime;
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(180, now);
+          osc.frequency.linearRampToValueAtTime(110, now + 0.25);
+          gain.gain.setValueAtTime(0.25, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now);
+          osc.stop(now + 0.25);
+        } catch (e) { console.log('Audio error:', e); }
+      }
+
+      // Suara Selesai Kuis (Fanfare)
+      playFanfare() {
+        try {
+          this.init();
+          const now = this.ctx.currentTime;
+          const notes = [440, 554.37, 659.25, 880]; // A4, C#5, E5, A5
+          notes.forEach((freq, i) => {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(freq, now + (i * 0.12));
+            gain.gain.setValueAtTime(0.2, now + (i * 0.12));
+            gain.gain.exponentialRampToValueAtTime(0.001, now + (i * 0.12) + 0.4);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(now + (i * 0.12));
+            osc.stop(now + (i * 0.12) + 0.4);
+          });
+        } catch (e) { console.log('Audio error:', e); }
+      }
+    }
+
+    /* ==========================================================================
+       3. MANAJER NIKATOR SUARA (Web Speech API - Text To Speech Bahasa Indonesia)
+       ========================================================================== */
+    class SpeechManager {
+      constructor() {
+        this.synth = window.speechSynthesis;
+        this.voice = null;
+        this.rate = 1.0;
+        this.pitch = 1.0;
+        this.isMuted = false;
+        this.currentText = '';
+        this.token = 0;
+        this.initVoices();
+      }
+
+      initVoices() {
+        if (!('speechSynthesis' in window)) {
+          console.warn('Browser tidak mendukung Web Speech API');
+          return;
+        }
+
+        const loadIndonesianVoice = () => {
+          const voices = this.synth.getVoices();
+          // Prioritaskan Suara Bahasa Indonesia (id-ID)
+          this.voice = voices.find(v => v.lang.includes('id') || v.lang.includes('ID')) || voices[0];
+        };
+
+        loadIndonesianVoice();
+        if (this.synth.onvoiceschanged !== undefined) {
+          this.synth.onvoiceschanged = loadIndonesianVoice;
+        }
+      }
+
+      speak(text, priority = false) {
+        if (this.isMuted || !text) return;
+
+        if (priority || this.synth.speaking) {
+          this.synth.cancel(); // Hentikan ucapan sebelumnya jika ada instruksi baru
+        }
+
+        this.currentText = text;
+        const utterance = new SpeechSynthesisUtterance(text);
+        if (this.voice) utterance.voice = this.voice;
+        utterance.lang = 'id-ID';
+        utterance.rate = this.rate;
+        utterance.pitch = this.pitch;
+
+        // Visual Status Updates
+        utterance.onstart = () => {
+          this.updateVisualStatus(true, 'Sedang Membaca...');
+        };
+
+        utterance.onend = () => {
+          this.updateVisualStatus(false, 'Suara Siap');
+        };
+
+        utterance.onerror = () => {
+          this.updateVisualStatus(false, 'Suara Siap');
+        };
+
+        // Salin Teks ke ARIA Live Announcer untuk Screen Reader Eksternal (NVDA/JAWS)
+        const announcer = document.getElementById('aria-announcer');
+        if (announcer) {
+          announcer.textContent = text;
+        }
+
+        this._say([utterance]);
+      }
+
+      _say(list) {
+        const tk = ++this.token;
+        setTimeout(() => { if (tk === this.token) list.forEach(u => this.synth.speak(u)); }, 80);
+      }
+
+      speakSequence(texts) {
+        if (this.isMuted || !texts || texts.length === 0) return;
+        
+        // 1. Segera batalkan suara yang sedang berjalan agar tidak bertabrakan
+        this.synth.cancel(); 
+        
+        const combinedTextForVisual = texts.join(' ');
+        this.currentText = combinedTextForVisual;
+        
+        const announcer = document.getElementById('aria-announcer');
+        if (announcer) {
+          announcer.textContent = combinedTextForVisual;
+        }
+
+        // 3. Masukkan antrean objek utterance secara terpisah untuk menciptakan jeda natural
+        const queued = [];
+        texts.forEach((text, index) => {
+          const utterance = new SpeechSynthesisUtterance(text);
+          if (this.voice) utterance.voice = this.voice;
+          utterance.lang = 'id-ID';
+          utterance.rate = this.rate;
+          utterance.pitch = this.pitch;
+          
+          if (index === 0) {
+            utterance.onstart = () => {
+              this.updateVisualStatus(true, 'Sedang Membaca...');
+            };
+          }
+          if (index === texts.length - 1) {
+            utterance.onend = () => {
+              this.updateVisualStatus(false, 'Suara Siap');
+            };
+            utterance.onerror = () => {
+              this.updateVisualStatus(false, 'Suara Siap');
+            };
+          }
+          
+          queued.push(utterance);
+        });
+        this._say(queued);
+      }
+
+      stop() {
+        if (this.synth) {
+          this.token++;
+          this.synth.cancel();
+          this.updateVisualStatus(false, 'Dihentikan');
+        }
+      }
+
+      updateVisualStatus(isSpeaking, text) {
+        const indicator = document.getElementById('speech-indicator');
+        const statusText = document.getElementById('speech-status-text');
+        if (indicator && statusText) {
+          statusText.textContent = text;
+          if (isSpeaking) {
+            indicator.classList.remove('opacity-30');
+          } else {
+            indicator.classList.add('opacity-30');
+          }
+        }
+      }
+    }
+
+    /* ==========================================================================
+       4. STATE DAN LOGIKA APLIKASI UTAMA
+       ========================================================================== */
+    const audioFx = new AudioSynthesizer();
+    const tts = new SpeechManager();
+
+    // App State Variables
+    let currentView = 'START'; // 'START' | 'HOME' | 'LESSON' | 'QUIZ' | 'SUMMARY'
+    let selectedSubject = null;
+    let currentChapterIndex = 0;
+    let currentQuestionIndex = 0;
+    let quizScore = 0;
+    let activeQuizAnswers = [];
+    let lastFeedbackSpeech = '';
+
+    // Inisialisasi Saat Dokumen Dimuat
+    document.addEventListener('DOMContentLoaded', () => {
+      lucide.createIcons();
+      setupKeyboardShortcuts();
+      initInputMode();
+      renderStartScreen();
+    });
+
+    /* ==========================================================================
+       5. VIEW RENDERERS (Halaman Beranda, Pelajaran, Kuis)
+       ========================================================================== */
+    
+    // RENDER: LAYAR AWAL (START SCREEN) UNTUK BYPASS AUTOPLAY
+    function renderStartScreen() {
+      currentView = 'START';
+      const viewport = document.getElementById('app-viewport');
+      
+      let html = `
+        <div class="flex flex-col items-center justify-center min-h-[65vh] space-y-10 animate-fadeIn text-center">
+          <div class="bg-amber-400 p-8 rounded-full shadow-2xl animate-pulse">
+            <i data-lucide="power" class="w-20 h-20 text-slate-950"></i>
+          </div>
+          
+          <div>
+            <h2 class="text-4xl md:text-6xl font-black text-amber-400 mb-4">AksesEdu</h2>
+            <p class="text-xl text-slate-300 max-w-2xl mx-auto font-medium leading-relaxed">
+              ${isTouchMode() ? 'Selamat datang. Ketuk di mana saja pada tombol besar di bawah ini untuk memulai aplikasi dan mengaktifkan panduan suara.' : 'Selamat datang. Silakan tekan tombol <kbd class="bg-amber-400 text-slate-950 px-2 py-0.5 rounded font-black">Enter</kbd> pada keyboard atau klik tombol di bawah ini untuk memulai aplikasi dan mengaktifkan panduan suara.'}
+            </p>
+          </div>
+
+          <button 
+            id="btn-start-app"
+            onclick="startApplication()"
+            class="bg-amber-400 hover:bg-amber-300 text-slate-950 ${isTouchMode() ? 'w-full min-h-[40vh]' : 'px-12 py-6'} rounded-[2rem] font-black text-3xl shadow-[0_0_50px_rgba(251,191,36,0.5)] transition focus:ring-8 focus:ring-white focus:outline-none"
+            aria-label="Mulai Aplikasi Pendidikan">
+            Mulai Aplikasi
+          </button>
+        </div>
+      `;
+
+      viewport.innerHTML = html;
+      lucide.createIcons();
+      
+      syncSurface();
+      // Arahkan fokus langsung ke tombol start agar terbaca oleh screen reader eksternal dan bisa langsung di-Enter
+      setTimeout(() => {
+        const startBtn = document.getElementById('btn-start-app');
+        if(startBtn) startBtn.focus();
+      }, 300);
+    }
+
+    // FUNGSI INISIALISASI SETELAH TOMBOL MULAI DITEKAN
+    function startApplication() {
+      audioFx.init(); // Membuka (resume) AudioContext yang diblokir browser
+      audioFx.playClick();
+      
+      // Pesan instruksi awal sesuai permintaan (SANGAT KRUSIAL: PANDUAN PENGGUNAAN)
+      const welcomeInstruction = 'Selamat datang di AksesEdu. Media ini dirancang khusus dengan navigasi suara. Berikut panduan tombolnya: Tekan tombol Spasi untuk mengulang suara materi atau soal. Tekan tombol angka 1, 2, 3, atau 4 untuk memilih opsi jawaban kuis atau menu pelajaran. Tekan tombol Enter untuk melanjutkan ke soal berikutnya. Tekan tombol Alt dan huruf H bersamaan untuk kembali ke halaman utama. Sekarang Anda berada di Menu Utama. Tekan tombol angka 1 untuk pelajaran Sejarah, atau angka 2 untuk pelajaran Biologi.';
+      
+      renderHome();
+      
+      // Berikan sedikit jeda sebelum berbicara agar transisi layar mulus
+      setTimeout(() => {
+        isTouchMode() ? tts.speakSequence(touchWelcome()) : tts.speak(welcomeInstruction);
+      }, 500);
+    }
+
+    // RENDER: BERANDA (Pilih Mata Pelajaran)
+    function renderHome() {
+      currentView = 'HOME';
+      menuCursor = -1;
+      syncSurface();
+      const viewport = document.getElementById('app-viewport');
+      
+      let html = `
+        <div class="space-y-8 animate-fadeIn">
+          
+          <!-- Banner Selamat Datang -->
+          <div class="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 border-4 border-amber-400 p-6 md:p-8 rounded-3xl shadow-2xl">
+            <h2 class="text-3xl md:text-4xl font-black text-amber-400 mb-3">
+              Pilih Mata Pelajaran SMA
+            </h2>
+            <p class="text-slate-200 text-lg font-medium leading-relaxed">
+              Selamat datang! Silakan pilih modul materi pembelajaran berbasis suara di bawah ini. <span class="kbd-only">Anda dapat menekan tombol <kbd class="bg-amber-400 text-slate-950 px-2 py-0.5 rounded font-black">Tab</kbd> untuk berpindah opsi dan <kbd class="bg-amber-400 text-slate-950 px-2 py-0.5 rounded font-black">Enter</kbd> untuk memilih.</span><span class="touch-only">Geser jari ke kanan atau kiri untuk mendengar pilihan, lalu ketuk dua kali untuk membukanya.</span>
+            </p>
+          </div>
+
+          <!-- List Kartu Mata Pelajaran -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      `;
+
+      APP_DATA.subjects.forEach((subj, idx) => {
+        const numKey = idx + 1;
+        html += `
+          <div data-menu-item="${idx}" role="region" aria-label="Mata Pelajaran ${subj.title}" class="bg-slate-900 border-4 border-slate-700 hover:border-amber-400 rounded-3xl p-6 flex flex-col justify-between transition-all duration-300 shadow-xl group">
+            <div>
+              <div class="flex items-center justify-between mb-4">
+                <span class="bg-amber-400 text-slate-950 font-black text-sm px-3 py-1 rounded-full uppercase tracking-wider">
+                  ${subj.grade}
+                </span>
+                <span class="text-slate-400 text-sm font-bold"><span class="kbd-only">Tekan Angka [${numKey}]</span><span class="touch-only">Pilihan ${numKey}</span></span>
+              </div>
+              <h3 class="text-2xl font-black text-white group-hover:text-amber-300 mb-2">
+                ${subj.title}
+              </h3>
+              <p class="text-amber-400 font-bold mb-4">${subj.topic}</p>
+              <p class="text-slate-300 text-base mb-6 leading-relaxed">
+                ${subj.description}
+              </p>
+            </div>
+
+            <button 
+              id="subj-btn-${subj.id}"
+              onclick="selectSubject('${subj.id}')"
+              onfocus="tts.speak('Pilihan ${numKey}: Mata Pelajaran ${subj.title}, ${subj.topic}. Tekan Enter untuk membuka.')"
+              class="w-full py-4 bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-lg rounded-2xl flex items-center justify-center gap-3 transition shadow-lg focus:ring-4 focus:ring-amber-300"
+              aria-label="Buka Pelajaran ${subj.title}">
+              <i data-lucide="book-open" class="w-6 h-6" aria-hidden="true"></i>
+              <span>Mulai Belajar ${subj.title}</span>
+            </button>
+          </div>
+        `;
+      });
+
+      html += `
+          </div>
+        </div>
+      `;
+
+      viewport.innerHTML = html;
+      lucide.createIcons();
+    }
+
+    // MEMILIH SUBJECT
+    function selectSubject(subjectId) {
+      audioFx.playClick();
+      selectedSubject = APP_DATA.subjects.find(s => s.id === subjectId);
+      currentChapterIndex = 0;
+      renderLessonView();
+    }
+
+    // RENDER: HALAMAN MATERI PELAJARAN (LESSON VIEW)
+    function renderLessonView() {
+      currentView = 'LESSON';
+      const viewport = document.getElementById('app-viewport');
+      const chapter = selectedSubject.chapters[currentChapterIndex];
+      const totalChapters = selectedSubject.chapters.length;
+
+      let html = `
+        <div class="space-y-6 animate-fadeIn">
+          
+          <!-- Navigation Back Bar -->
+          <div class="flex items-center justify-between bg-slate-900 border-2 border-slate-800 p-4 rounded-2xl">
+            <button onclick="navToHome()" onfocus="tts.speak('Tombol Kembali ke Menu Utama')" class="flex items-center gap-2 text-amber-300 hover:text-amber-200 font-bold text-base">
+              <i data-lucide="arrow-left" class="w-5 h-5"></i>
+              <span>Kembali ke Pilih Mata Pelajaran</span>
+            </button>
+            <span class="text-slate-400 font-bold text-sm">
+              Mata Pelajaran: <span class="text-amber-400">${selectedSubject.title}</span>
+            </span>
+          </div>
+
+          <!-- Main Article Container -->
+          <article class="bg-slate-900 border-4 border-amber-400 rounded-3xl p-6 md:p-8 shadow-2xl relative">
+            
+            <!-- Chapter Header -->
+            <header class="border-b-2 border-slate-800 pb-4 mb-6">
+              <div class="flex items-center justify-between flex-wrap gap-2 mb-2">
+                <span class="bg-amber-400/20 text-amber-300 border border-amber-400/50 font-bold text-sm px-3 py-1 rounded-lg">
+                  Bagian ${currentChapterIndex + 1} dari ${totalChapters}
+                </span>
+                <span class="text-slate-400 text-sm font-semibold"><span class="kbd-only">Gunakan Spasi untuk Membaca Ulang</span><span class="touch-only">Ketuk layar untuk mengulang suara</span></span>
+              </div>
+              <h2 id="chapter-title" class="text-2xl md:text-3xl font-black text-amber-400">
+                ${chapter.title}
+              </h2>
+            </header>
+
+            <!-- Chapter Body Content Text -->
+            <div id="chapter-body" class="text-slate-100 text-lg md:text-xl leading-relaxed font-medium mb-8 bg-slate-950/60 p-6 rounded-2xl border border-slate-800">
+              ${chapter.content}
+            </div>
+
+            <!-- Chapter Navigation Controls -->
+            <div class="flex flex-wrap items-center justify-between gap-4 pt-4 border-t-2 border-slate-800">
+              
+              <button 
+                onclick="prevChapter()"
+                onfocus="tts.speak('Tombol Bab Sebelumnya')"
+                ${currentChapterIndex === 0 ? 'disabled class="opacity-40 bg-slate-800 text-slate-500 px-5 py-3.5 rounded-2xl font-bold flex items-center gap-2 cursor-not-allowed"' : 'class="bg-slate-800 hover:bg-slate-700 text-amber-300 border-2 border-amber-400/50 px-5 py-3.5 rounded-2xl font-bold flex items-center gap-2 transition"'}
+                aria-label="Bab Sebelumnya">
+                <i data-lucide="chevron-left" class="w-5 h-5"></i>
+                <span>Bab Sebelumnya</span>
+              </button>
+
+              <button 
+                onclick="replayCurrentSection()"
+                onfocus="tts.speak('Tombol Putar Ulang Suara Materi')"
+                class="bg-amber-400 hover:bg-amber-300 text-slate-950 px-6 py-3.5 rounded-2xl font-black flex items-center gap-2 transition shadow-md"
+                aria-label="Putar Suara Bab Ini">
+                <i data-lucide="play" class="w-5 h-5"></i>
+                <span>Putar Suara <span class="kbd-only">[Spasi]</span></span>
+              </button>
+
+              ${currentChapterIndex < totalChapters - 1 ? `
+                <button 
+                  onclick="nextChapter()"
+                  onfocus="tts.speak('Tombol Lanjut Bab Berikutnya')"
+                  class="bg-amber-400 hover:bg-amber-300 text-slate-950 px-6 py-3.5 rounded-2xl font-black flex items-center gap-2 transition shadow-md"
+                  aria-label="Bab Berikutnya">
+                  <span>Bab Berikutnya</span>
+                  <i data-lucide="chevron-right" class="w-5 h-5"></i>
+                </button>
+              ` : `
+                <button 
+                  onclick="startQuiz()"
+                  onfocus="tts.speak('Tombol Mulai Kuis Evaluasi')"
+                  class="bg-emerald-400 hover:bg-emerald-300 text-slate-950 px-6 py-3.5 rounded-2xl font-black flex items-center gap-2 transition shadow-lg animate-bounce"
+                  aria-label="Mulai Kuis Evaluasi">
+                  <i data-lucide="help-circle" class="w-5 h-5"></i>
+                  <span>Mulai Kuis Evaluasi!</span>
+                </button>
+              `}
+
+            </div>
+
+          </article>
+
+        </div>
+      `;
+
+      viewport.innerHTML = html;
+      lucide.createIcons();
+
+      // Otomatis bacakan teks materi bab saat ini
+      setTimeout(() => {
+        speakChapter(chapter);
+      }, 300);
+    }
+
+    function prevChapter() {
+      if (currentChapterIndex > 0) {
+        audioFx.playClick();
+        currentChapterIndex--;
+        renderLessonView();
+      }
+    }
+
+    function nextChapter() {
+      if (currentChapterIndex < selectedSubject.chapters.length - 1) {
+        audioFx.playClick();
+        currentChapterIndex++;
+        renderLessonView();
+      }
+    }
+
+    // RENDER: HALAMAN KUIS INTERAKTIF AUDIO
+    function startQuiz() {
+      audioFx.playClick();
+      currentView = 'QUIZ';
+      currentQuestionIndex = 0;
+      quizScore = 0;
+      activeQuizAnswers = [];
+      renderQuizQuestion();
+    }
+
+    function renderQuizQuestion() {
+      menuCursor = -1;
+      const viewport = document.getElementById('app-viewport');
+      const q = selectedSubject.quiz[currentQuestionIndex];
+      const totalQuestions = selectedSubject.quiz.length;
+
+      let html = `
+        <div class="space-y-6 animate-fadeIn">
+          
+          <!-- Header Kuis -->
+          <div class="bg-slate-900 border-2 border-slate-800 p-4 rounded-2xl flex items-center justify-between flex-wrap gap-2">
+            <span class="text-amber-400 font-black text-lg">
+              Kuis Evaluasi: ${selectedSubject.title}
+            </span>
+            <span class="bg-slate-800 text-amber-300 font-bold px-3 py-1 rounded-lg text-sm border border-slate-700">
+              Soal ${currentQuestionIndex + 1} dari ${totalQuestions}
+            </span>
+          </div>
+
+          <!-- Pertanyaan Card -->
+          <div class="bg-slate-900 border-4 border-amber-400 rounded-3xl p-6 md:p-8 shadow-2xl">
+            
+            <h3 class="text-slate-400 text-sm font-bold uppercase tracking-wider mb-2">Pertanyaan Evaluasi:</h3>
+            <p id="quiz-question-text" class="text-xl md:text-2xl font-black text-white leading-relaxed mb-8">
+              ${q.question}
+            </p>
+
+            <div class="text-sm font-bold text-amber-300 mb-4">
+              <span class="kbd-only">Tekan angka 1, 2, 3, atau 4 pada keyboard untuk memilih jawaban cepat:</span><span class="touch-only">Geser kanan atau kiri untuk memilih jawaban, lalu ketuk dua kali untuk mengunci jawaban:</span>
+            </div>
+
+            <!-- Pilihan Jawaban A, B, C, D -->
+            <div class="grid grid-cols-1 gap-4 mb-8">
+      `;
+
+      const keyNames = ['1', '2', '3', '4'];
+      const optionLabels = ['A', 'B', 'C', 'D'];
+
+      q.options.forEach((opt, idx) => {
+        html += `
+          <button 
+            id="quiz-opt-${idx}" data-menu-item="${idx}"
+            onclick="submitAnswer(${idx})"
+            onfocus="tts.speak('Pilihan ${optionLabels[idx]}: ${opt}')"
+            class="w-full text-left bg-slate-800 hover:bg-slate-700 border-3 border-slate-700 hover:border-amber-400 p-5 rounded-2xl transition flex items-center justify-between group focus:ring-4 focus:ring-amber-300">
+            <span class="text-lg md:text-xl font-bold text-slate-100 group-hover:text-amber-300">
+              ${opt}
+            </span>
+            <span class="kbd-only bg-slate-900 group-hover:bg-amber-400 group-hover:text-slate-950 text-amber-400 font-black px-3 py-1.5 rounded-xl border border-amber-400/30 text-sm">
+              Tekan [${keyNames[idx]}]
+            </span>
+          </button>
+        `;
+      });
+
+      html += `
+            </div>
+
+            <!-- Action Read Control -->
+            <div class="flex justify-end pt-4 border-t border-slate-800">
+              <button onclick="replayCurrentSection()" class="bg-slate-800 text-amber-300 px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 hover:bg-slate-700 border border-slate-700">
+                <i data-lucide="volume-2" class="w-5 h-5"></i>
+                <span>Bacakan Ulang Soal <span class="kbd-only">[Spasi]</span></span>
+              </button>
+            </div>
+
+          </div>
+
+        </div>
+      `;
+
+      viewport.innerHTML = html;
+      lucide.createIcons();
+
+      // Otomatis sebutkan soal dan instruksi spesifik tombol pilihan jawaban
+      setTimeout(() => {
+        let fullRead = `Soal nomor ${currentQuestionIndex + 1}. ${q.question}. `;
+        q.options.forEach((opt, idx) => {
+          const keyNames = ['1', '2', '3', '4'];
+          fullRead += `Tekan ${keyNames[idx]} untuk opsi ${opt}. `;
+        });
+        speakQuizPrompt(q, fullRead);
+      }, 300);
+    }
+
+    // SUBMIT JAWABAN KUIS
+    function submitAnswer(selectedIndex) {
+      // 1. Segera hentikan audio TTS yang sedang berjalan agar tidak menumpuk
+      tts.stop();
+
+      const q = selectedSubject.quiz[currentQuestionIndex];
+      const isCorrect = selectedIndex === q.correctIndex;
+
+      // 2. Mainkan nada synthesizer (chime/buzz) seketika
+      if (isCorrect) {
+        audioFx.playCorrectChime();
+        quizScore += 100 / selectedSubject.quiz.length;
+      } else {
+        audioFx.playWrongBuzz();
+      }
+
+      // Tampilkan Umpan Balik Instan yang Lebih Empatik dan Suportif
+      let statusTitle = '';
+      let appreciationText = '';
+      let explanationText = q.explanation;
+      let instructionText = isTouchMode() ? 'Sekarang, ketuk dua kali atau geser ke kanan, untuk melanjutkan ke soal berikutnya.' : 'Sekarang, silakan tekan tombol Enter, untuk melanjutkan ke soal berikutnya.';
+      
+      if (isCorrect) {
+        statusTitle = 'Jawaban Kamu Benar!';
+        appreciationText = 'Wah, luar biasa! Jawaban kamu benar.';
+      } else {
+        statusTitle = 'Belum Tepat';
+        appreciationText = 'Belum tepat, tapi tetap semangat ya!';
+      }
+      
+      // Simpan narasi feedback dalam array untuk menciptakan jeda natural (3 Utterance terpisah)
+      lastFeedbackSpeech = [appreciationText, explanationText, instructionText];
+      
+      // Panggil sequence suara agar ada jeda natural antar kalimat
+      tts.speakSequence(lastFeedbackSpeech);
+
+      // Modal / Overlay Umpan Balik Singkat
+      const viewport = document.getElementById('app-viewport');
+      viewport.innerHTML = `
+        <div class="bg-slate-900 border-4 ${isCorrect ? 'border-emerald-400' : 'border-rose-500'} rounded-3xl p-8 text-center space-y-6 shadow-2xl animate-fadeIn">
+          <div class="w-20 h-20 mx-auto rounded-full ${isCorrect ? 'bg-emerald-400 text-slate-950' : 'bg-rose-500 text-white'} flex items-center justify-center font-black text-4xl">
+            <i data-lucide="${isCorrect ? 'check' : 'x'}" class="w-12 h-12"></i>
+          </div>
+
+          <h3 class="text-3xl font-black ${isCorrect ? 'text-emerald-400' : 'text-rose-400'}">
+            ${statusTitle}
+          </h3>
+
+          <p class="text-slate-200 text-xl font-medium leading-relaxed max-w-2xl mx-auto bg-slate-950 p-6 rounded-2xl border border-slate-800">
+            ${q.explanation}
+          </p>
+
+          <button 
+            id="btn-next-question"
+            onclick="nextQuestionOrSummary()"
+            
+            class="bg-amber-400 hover:bg-amber-300 text-slate-950 px-8 py-4 rounded-2xl font-black text-xl shadow-lg transition focus:ring-8 focus:ring-white">
+            ${currentQuestionIndex < selectedSubject.quiz.length - 1 ? 'Lanjut Soal Berikutnya' : 'Lihat Hasil Akhir'}
+          </button>
+        </div>
+      `;
+      lucide.createIcons();
+
+      setTimeout(() => {
+        const nextBtn = document.getElementById('btn-next-question');
+        if (nextBtn) nextBtn.focus();
+      }, 500);
+    }
+
+    function nextQuestionOrSummary() {
+      audioFx.playClick();
+      if (currentQuestionIndex < selectedSubject.quiz.length - 1) {
+        currentQuestionIndex++;
+        renderQuizQuestion();
+      } else {
+        renderSummaryView();
+      }
+    }
+
+    // RENDER: HALAMAN HASIL & RINGKASAN SKOR
+    function renderSummaryView() {
+      currentView = 'SUMMARY';
+      menuCursor = -1;
+      audioFx.playFanfare();
+      const viewport = document.getElementById('app-viewport');
+      const finalScore = Math.round(quizScore);
+
+      let statusGrade = 'Sangat Baik!';
+      if (finalScore < 60) statusGrade = 'Perlu Belajar Lagi';
+      else if (finalScore < 85) statusGrade = 'Bagus Sekali!';
+
+      let html = `
+        <div class="bg-slate-900 border-4 border-amber-400 rounded-3xl p-8 text-center space-y-8 shadow-2xl animate-fadeIn">
+          
+          <div class="space-y-2">
+            <span class="bg-amber-400 text-slate-950 font-black text-sm px-4 py-1.5 rounded-full uppercase tracking-wider">
+              Evaluasi Selesai
+            </span>
+            <h2 class="text-3xl md:text-4xl font-black text-white">
+              Hasil Kuis: ${selectedSubject.title}
+            </h2>
+          </div>
+
+          <!-- Score Big Badge -->
+          <div class="bg-slate-950 border-4 border-amber-400 rounded-3xl p-8 max-w-sm mx-auto shadow-inner">
+            <span class="text-slate-400 font-bold text-base block mb-2">NILAI AKHIR ANDA</span>
+            <span class="text-6xl md:text-7xl font-black text-amber-400 tracking-tight">
+              ${finalScore}
+            </span>
+            <span class="text-slate-300 font-bold block mt-2 text-lg">
+              ${statusGrade}
+            </span>
+          </div>
+
+          <p class="text-slate-200 text-lg max-w-xl mx-auto leading-relaxed font-medium">
+            Selamat! Anda telah menyelesaikan seluruh sesi pembelajaran dan kuis untuk materi <strong class="text-amber-400">${selectedSubject.topic}</strong>.
+          </p>
+
+          <!-- Navigation Action Buttons -->
+          <div class="flex flex-wrap items-center justify-center gap-4 pt-4">
+            <button 
+              onclick="startQuiz()"
+              data-menu-item="0" onfocus="tts.speak('Tombol Ulangi Kuis')"
+              class="bg-slate-800 hover:bg-slate-700 text-amber-300 border-2 border-amber-400/50 px-6 py-4 rounded-2xl font-bold text-lg flex items-center gap-2">
+              <i data-lucide="rotate-ccw" class="w-5 h-5"></i>
+              <span>Ulangi Kuis</span>
+            </button>
+
+            <button 
+              onclick="navToHome()" data-menu-item="1" onfocus="tts.speak('Tombol Kembali ke Menu Utama')"
+              class="bg-amber-400 hover:bg-amber-300 text-slate-950 px-8 py-4 rounded-2xl font-black text-lg flex items-center gap-2 shadow-lg">
+              <i data-lucide="home" class="w-5 h-5"></i>
+              <span>Pilih Mata Pelajaran Lain</span>
+            </button>
+          </div>
+
+        </div>
+      `;
+
+      viewport.innerHTML = html;
+      lucide.createIcons();
+
+      setTimeout(() => {
+        isTouchMode() ? tts.speakSequence([`Kuis selesai. Nilai akhir Anda adalah ${finalScore}. ${statusGrade}.`, 'Geser kanan untuk mendengar pilihan: ulangi kuis atau kembali ke menu utama. Atau tahan jari sekitar satu detik untuk kembali ke menu utama.']) : tts.speak(`Kuis selesai. Nilai akhir Anda adalah ${finalScore}. ${statusGrade}. Tekan Alt Plus H untuk kembali ke menu utama.`);
+      }, 400);
+    }
+
+    // NAVIGASI KEMBALI KE HOME
+    function navToHome() {
+      audioFx.playClick();
+      tts.stop();
+      renderHome();
+      setTimeout(() => {
+        isTouchMode() ? tts.speakSequence(['Kembali ke menu utama.', 'Geser kanan untuk mendengar pilihan mata pelajaran.']) : tts.speak('Kembali ke menu utama pilihan mata pelajaran.');
+      }, 200);
+    }
+
+    /* ==========================================================================
+       6. ACCESSIBILITY CONTROLS & SHORTCUT LISTENERS
+       ========================================================================== */
+    
+    // Global Keyboard Shortcut Manager
+    function setupKeyboardShortcuts() {
+      document.addEventListener('keydown', (e) => {
+        
+        if (e.key === 'Escape' && !document.getElementById('shortcut-modal').classList.contains('hidden')) { toggleShortcutModal(false); return; }
+
+        // Alt + H : Home
+        if (e.altKey && (e.key === 'h' || e.key === 'H')) {
+          e.preventDefault();
+          navToHome();
+          return;
+        }
+
+        // Alt + K : Buka/Tutup Modal Bantuan
+        if (e.altKey && (e.key === 'k' || e.key === 'K')) {
+          e.preventDefault();
+          const modal = document.getElementById('shortcut-modal');
+          const isHidden = modal.classList.contains('hidden');
+          toggleShortcutModal(isHidden);
+          return;
+        }
+
+        // Alt + M : Toggle Mute Suara
+        if (e.altKey && (e.key === 'm' || e.key === 'M')) {
+          e.preventDefault();
+          toggleMute();
+          return;
+        }
+
+        // Tombol Enter untuk Lanjut Soal secara cepat tanpa harus mencari tombol
+        if (e.key === 'Enter') {
+          const nextBtn = document.getElementById('btn-next-question');
+          if (nextBtn && document.activeElement !== nextBtn) {
+            e.preventDefault();
+            nextBtn.click();
+            return;
+          }
+        }
+
+        // Tombol SPASI: Ulangi Pembacaan Teks Saat Ini
+        if (e.code === 'Space' && e.target.tagName !== 'BUTTON' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'SELECT') {
+          e.preventDefault();
+          replayCurrentSection();
+          return;
+        }
+
+        // Angka 1, 2, 3, 4 untuk Pilihan Cepat Kuis atau Home Subject
+        if (['1', '2', '3', '4'].includes(e.key)) {
+          const num = parseInt(e.key);
+          
+          if (currentView === 'HOME') {
+            if (num <= APP_DATA.subjects.length) {
+              selectSubject(APP_DATA.subjects[num - 1].id);
+            }
+          } else if (currentView === 'QUIZ') {
+            const optBtn = document.getElementById(`quiz-opt-${num - 1}`);
+            if (optBtn) {
+              optBtn.click();
+            }
+          }
+        }
+
+      });
+    }
+
+    // Ulangi Pembacaan Teks Sesuai Layar Aktif
+    function replayCurrentSection() {
+      audioFx.playClick();
+      if (currentView === 'HOME' || currentView === 'START') {
+        isTouchMode() ? speakHomeTouch() : tts.speak('Selamat datang di AksesEdu. Media ini dirancang khusus dengan navigasi suara. Berikut panduan tombolnya: Tekan tombol Spasi untuk mengulang suara materi atau soal. Tekan tombol angka 1, 2, 3, atau 4 untuk memilih opsi jawaban kuis atau menu pelajaran. Tekan tombol Enter untuk melanjutkan ke soal berikutnya. Tekan tombol Alt dan huruf H bersamaan untuk kembali ke halaman utama. Sekarang Anda berada di Menu Utama. Tekan tombol angka 1 untuk pelajaran Sejarah, atau angka 2 untuk pelajaran Biologi.');
+      } else if (currentView === 'LESSON') {
+        const chapter = selectedSubject.chapters[currentChapterIndex];
+        speakChapter(chapter);
+      } else if (currentView === 'QUIZ') {
+        const nextBtn = document.getElementById('btn-next-question');
+        if (nextBtn) {
+          // Jika berada di layar umpan balik (feedback) setelah menjawab
+          if (Array.isArray(lastFeedbackSpeech)) {
+            tts.speakSequence(lastFeedbackSpeech);
+          } else {
+            tts.speak(lastFeedbackSpeech);
+          }
+        } else {
+          // Jika berada di layar pertanyaan (belum menjawab)
+          const q = selectedSubject.quiz[currentQuestionIndex];
+          let fullRead = `Soal nomor ${currentQuestionIndex + 1}. ${q.question}. `;
+          q.options.forEach((opt, idx) => {
+            const keyNames = ['1', '2', '3', '4'];
+            fullRead += `Tekan ${keyNames[idx]} untuk opsi ${opt}. `;
+          });
+          speakQuizPrompt(q, fullRead);
+        }
+      } else if (currentView === 'SUMMARY') {
+        tts.speak(`Nilai kuis Anda adalah ${Math.round(quizScore)}.`);
+      }
+    }
+
+    // Toggle Mute Narasi
+    function toggleMute() {
+      tts.isMuted = !tts.isMuted;
+      const muteText = document.getElementById('mute-text');
+      const muteIcon = document.getElementById('mute-icon');
+
+      if (tts.isMuted) {
+        tts.stop();
+        if (muteText) muteText.textContent = 'Suara: Off';
+        if (muteIcon) muteIcon.setAttribute('data-lucide', 'volume-x');
+      } else {
+        if (muteText) muteText.textContent = 'Suara: On';
+        if (muteIcon) muteIcon.setAttribute('data-lucide', 'volume-2');
+        tts.speak('Suara narator diaktifkan kembali.');
+      }
+      lucide.createIcons();
+    }
+
+    // Ubah Kecepatan Suara TTS
+    function changeSpeechRate(newRate) {
+      tts.rate = parseFloat(newRate);
+      tts.speak(`Kecepatan suara diubah menjadi ${newRate} kali.`);
+    }
+
+    // Ubah Ukuran Teks untuk Low Vision
+    function setFontSize(size) {
+      const viewport = document.getElementById('app-viewport');
+      viewport.classList.remove('font-accessibility-large', 'font-accessibility-xlarge');
+      
+      if (size === 'large') {
+        viewport.classList.add('font-accessibility-large');
+        tts.speak('Ukuran teks diperbesar.');
+      } else if (size === 'xlarge') {
+        viewport.classList.add('font-accessibility-xlarge');
+        tts.speak('Ukuran teks sangat besar.');
+      } else {
+        tts.speak('Ukuran teks normal.');
+      }
+    }
+
+    // Buka / Tutup Modal Bantuan Keyboard
+    function toggleShortcutModal(show) {
+      const modal = document.getElementById('shortcut-modal');
+      if (show) {
+        audioFx.playClick();
+        modal.classList.remove('hidden');
+        tts.speak(isTouchMode() ? 'Membuka panduan gestur. Ketuk tombol tutup untuk keluar.' : 'Membuka Panduan Pintasan Keyboard. Tekan Escape atau tombol Tutup untuk keluar.');
+      } else {
+        modal.classList.add('hidden');
+        tts.speak('Panduan ditutup.');
+      }
+    }
+    /* ==========================================================================
+       7. MODE PERANGKAT OTOMATIS + KONTROL GESTUR SENTUH (SMARTPHONE)
+       ========================================================================== */
+    let modePref = 'auto';   // auto | touch | desktop
+    let gestureOn = true;
+    let menuCursor = -1;
+    const $id = (x) => document.getElementById(x);
+    const LBL = ['A', 'B', 'C', 'D'];
+    const stripLabel = (o) => o.replace(/^[A-D]\.\s*/, '');
+    const haptic = (p) => { try { if (navigator.vibrate) navigator.vibrate(p); } catch (e) {} };
+    function isTouchMode() { return document.body.classList.contains('mode-touch'); }
+
+    function autoDetectTouch() {
+      const mq = (q) => window.matchMedia && window.matchMedia(q).matches;
+      const pts = navigator.maxTouchPoints > 0;
+      const ua = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      return (mq('(pointer: coarse)') && pts) || (mq('(hover: none)') && pts) || ua;
+    }
+    function initInputMode() {
+      const q = new URLSearchParams(location.search).get('mode');
+      let saved = null; try { saved = localStorage.getItem('aksesedu-mode'); } catch (e) {}
+      modePref = ['auto', 'touch', 'desktop'].includes(q) ? q : (['auto', 'touch', 'desktop'].includes(saved) ? saved : 'auto');
+      applyMode(false);
+      setupGestures();
+    }
+    function applyMode(announce) {
+      const t = modePref === 'touch' || (modePref === 'auto' && autoDetectTouch());
+      document.body.classList.toggle('mode-touch', t);
+      document.body.classList.toggle('mode-desktop', !t);
+      const name = { auto: 'Otomatis', touch: 'Sentuh', desktop: 'Keyboard' }[modePref];
+      $id('mode-text').textContent = 'Mode: ' + name + (modePref === 'auto' ? ' (' + (t ? 'Sentuh' : 'Keyboard') + ')' : '');
+      if (announce && currentView === 'START') renderStartScreen(); else syncSurface();
+      if (announce) tts.speak('Mode ' + (t ? 'sentuh' : 'keyboard') + ' aktif.', true);
+    }
+    function cycleInputMode() {
+      const o = ['auto', 'touch', 'desktop'];
+      modePref = o[(o.indexOf(modePref) + 1) % 3];
+      try { localStorage.setItem('aksesedu-mode', modePref); } catch (e) {}
+      applyMode(true);
+    }
+    function syncSurface() {
+      const started = currentView !== 'START';
+      $id('touch-surface').classList.toggle('hidden', !(isTouchMode() && started && gestureOn));
+      $id('btn-resume-gesture').classList.toggle('hidden', !(isTouchMode() && started && !gestureOn));
+    }
+    function toggleTeacherMode() {
+      gestureOn = !gestureOn; haptic([40, 40, 40]); syncSurface();
+      tts.speak(gestureOn ? 'Mode gestur aktif.' : 'Mode guru. Gestur dimatikan sementara.', true);
+    }
+    function resumeGestures() { gestureOn = true; syncSurface(); tts.speak('Mode gestur aktif kembali.', true); }
+
+    // Ucapan khusus mode sentuh
+    function gestureHelpTexts() {
+      return ['Panduan gerakan. Ketuk satu kali untuk mengulang suara. Ketuk dua kali untuk memilih atau melanjutkan. Geser ke kanan untuk berikutnya, geser ke kiri untuk sebelumnya. Geser ke atas untuk mendengar panduan ini lagi. Geser ke bawah untuk menghentikan suara. Tahan jari sekitar satu detik untuk kembali ke menu utama.'];
+    }
+    function touchWelcome() {
+      return ['Selamat datang di AksesEdu. Media ini dikendalikan dengan gerakan jari di layar.', ...gestureHelpTexts(), 'Sekarang Anda berada di menu utama. Geser ke kanan untuk mendengar pilihan mata pelajaran, lalu ketuk dua kali untuk membukanya.'];
+    }
+    function speakHomeTouch() {
+      const list = APP_DATA.subjects.map((s, i) => `${i + 1}, ${s.title}`).join('. ');
+      tts.speakSequence([`Menu utama. Pelajaran yang tersedia: ${list}.`, 'Geser kanan untuk mendengar pilihan, lalu ketuk dua kali untuk membukanya.']);
+    }
+    function speakChapter(ch) {
+      if (!isTouchMode()) return tts.speak(`${ch.title}. ${ch.content}`);
+      const last = currentChapterIndex === selectedSubject.chapters.length - 1;
+      tts.speakSequence([`${ch.title}. ${ch.content}`, last ? 'Ini bab terakhir. Ketuk dua kali untuk memulai kuis evaluasi. Geser kiri untuk bab sebelumnya.' : 'Geser kanan untuk bab berikutnya. Ketuk sekali untuk mengulang.']);
+    }
+    function speakQuizPrompt(q, fullRead) {
+      if (!isTouchMode()) return tts.speak(fullRead);
+      tts.speakSequence([`Soal nomor ${currentQuestionIndex + 1}. ${q.question}`, ...q.options.map((o, i) => `Pilihan ${LBL[i]}: ${stripLabel(o)}`), 'Geser kanan atau kiri untuk memilih jawaban, lalu ketuk dua kali untuk mengunci jawaban. Ketuk sekali untuk mengulang soal.']);
+    }
+
+    // Daftar pilihan yang bisa dijelajahi dengan geser kanan/kiri
+    function isFeedback() { return !!$id('btn-next-question'); }
+    function getMenuItems() {
+      if (currentView === 'HOME') return APP_DATA.subjects.map((s, i) => ({ say: `Pilihan ${i + 1}: ${s.title}. ${s.topic}. Ketuk dua kali untuk membuka.`, run: () => selectSubject(s.id) }));
+      if (currentView === 'QUIZ' && !isFeedback()) return selectedSubject.quiz[currentQuestionIndex].options.map((o, i) => ({ say: `Pilihan ${LBL[i]}: ${stripLabel(o)}. Ketuk dua kali untuk memilih jawaban ini.`, run: () => submitAnswer(i) }));
+      if (currentView === 'SUMMARY') return [{ say: 'Ulangi kuis. Ketuk dua kali untuk mengulang.', run: startQuiz }, { say: 'Kembali ke menu pilihan mata pelajaran. Ketuk dua kali untuk memilih.', run: navToHome }];
+      return null;
+    }
+    function setCursor(i) {
+      menuCursor = i;
+      document.querySelectorAll('[data-menu-item]').forEach(el => el.classList.toggle('touch-selected', Number(el.dataset.menuItem) === i));
+      const el = document.querySelector(`[data-menu-item="${i}"]`);
+      if (el && el.scrollIntoView) el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    }
+    function edge(msg) { audioFx.playBoundary(); haptic([30, 50, 30]); tts.speak(msg, true); }
+
+    function gNext() {
+      if (currentView === 'LESSON') {
+        if (currentChapterIndex < selectedSubject.chapters.length - 1) { haptic(15); nextChapter(); }
+        else edge('Ini bab terakhir. Ketuk dua kali untuk memulai kuis evaluasi.');
+        return;
+      }
+      if (currentView === 'QUIZ' && isFeedback()) { haptic(15); nextQuestionOrSummary(); return; }
+      const items = getMenuItems(); if (!items) return;
+      if (menuCursor < items.length - 1) { audioFx.playClick(); haptic(15); setCursor(menuCursor + 1); tts.speak(items[menuCursor].say, true); }
+      else edge('Ini pilihan terakhir. ' + items[menuCursor].say);
+    }
+    function gPrev() {
+      if (currentView === 'LESSON') {
+        if (currentChapterIndex > 0) { haptic(15); prevChapter(); } else edge('Ini bab pertama.');
+        return;
+      }
+      if (currentView === 'QUIZ' && isFeedback()) { edge('Tidak ada yang sebelumnya. Ketuk dua kali atau geser kanan untuk soal berikutnya.'); return; }
+      const items = getMenuItems(); if (!items) return;
+      if (menuCursor > 0) { audioFx.playClick(); haptic(15); setCursor(menuCursor - 1); tts.speak(items[menuCursor].say, true); }
+      else edge('Ini pilihan pertama.');
+    }
+    function gConfirm() {
+      audioFx.playSelect(); haptic([20, 40, 20]);
+      if (currentView === 'LESSON') { if (currentChapterIndex < selectedSubject.chapters.length - 1) nextChapter(); else startQuiz(); return; }
+      if (currentView === 'QUIZ' && isFeedback()) { nextQuestionOrSummary(); return; }
+      const items = getMenuItems(); if (!items) return;
+      if (menuCursor < 0) { tts.speak('Belum ada pilihan. Geser ke kanan untuk mendengar pilihan.', true); return; }
+      items[menuCursor].run();
+    }
+
+    // Mesin gestur sentuh
+    const G = { x: 0, y: 0, t: 0, moved: false, multi: false, long: null, longDone: false, lastTap: 0, single: null, lastTouch: 0 };
+    function gestureActive() { return isTouchMode() && gestureOn && currentView !== 'START' && $id('shortcut-modal').classList.contains('hidden'); }
+    function setupGestures() {
+      const el = $id('touch-surface');
+      el.addEventListener('contextmenu', (e) => e.preventDefault());
+      el.addEventListener('touchstart', (e) => {
+        e.preventDefault(); G.lastTouch = Date.now();
+        if (e.touches.length === 3) { clearTimeout(G.long); G.multi = true; toggleTeacherMode(); return; }
+        if (e.touches.length >= 2) { G.multi = true; clearTimeout(G.long); return; }
+        const p = e.touches[0];
+        G.x = p.clientX; G.y = p.clientY; G.t = Date.now(); G.moved = false; G.longDone = false; G.multi = false;
+        clearTimeout(G.long);
+        G.long = setTimeout(() => { if (!G.moved && gestureActive()) { G.longDone = true; haptic(60); navToHome(); } }, 800);
+      }, { passive: false });
+      el.addEventListener('touchmove', (e) => {
+        e.preventDefault();
+        const p = e.touches[0];
+        if (Math.hypot(p.clientX - G.x, p.clientY - G.y) > 12) { G.moved = true; clearTimeout(G.long); }
+      }, { passive: false });
+      el.addEventListener('touchcancel', () => { clearTimeout(G.long); G.multi = false; });
+      el.addEventListener('touchend', (e) => {
+        e.preventDefault(); clearTimeout(G.long);
+        if (e.touches.length > 0) return;
+        if (G.multi) { G.multi = false; return; }
+        if (G.longDone || !gestureActive()) return;
+        const p = e.changedTouches[0], dx = p.clientX - G.x, dy = p.clientY - G.y, dt = Date.now() - G.t;
+        if (Math.hypot(dx, dy) < 15 && dt < 500) {
+          const now = Date.now();
+          if (now - G.lastTap < 350) { clearTimeout(G.single); G.lastTap = 0; gConfirm(); }
+          else {
+            G.lastTap = now;
+            G.single = setTimeout(() => { G.lastTap = 0; if (gestureActive()) { haptic(15); replayCurrentSection(); } }, 350);
+          }
+        } else if (dt < 900 && Math.max(Math.abs(dx), Math.abs(dy)) >= 50) {
+          if (Math.abs(dx) > Math.abs(dy) * 1.5) (dx > 0 ? gNext : gPrev)();
+          else if (Math.abs(dy) > Math.abs(dx) * 1.5) {
+            if (dy < 0) { audioFx.playClick(); haptic(15); tts.speakSequence(gestureHelpTexts()); }
+            else { haptic(15); tts.stop(); }
+          }
+        }
+      }, { passive: false });
+      // Cadangan untuk pembaca layar (TalkBack/VoiceOver): ketuk dua kali -> klik
+      el.addEventListener('click', () => { if (Date.now() - G.lastTouch > 1200 && gestureActive()) gConfirm(); });
+    }
+  </script>
+</body>
+</html>
